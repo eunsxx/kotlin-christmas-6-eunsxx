@@ -37,7 +37,8 @@ fun main() {
     val totalPrice = calculateTotalPrice(mappingOrder)
     output.printTotalPrice(totalPrice)
     output.printGift(totalPrice)
-    output.printBenefit(date, totalPrice, mappingOrder)
+    val totalDiscount = output.printBenefit(date, totalPrice, mappingOrder)
+    output.printTotalDiscount(totalDiscount)
 }
 fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
     val date = LocalDate.of(year, month, day)
@@ -159,28 +160,31 @@ class OutputView {
         println(if (isGift) "샴페인 1개" else "없음")
     }
 
-    fun printBenefit(date: Int, totalPrice: Int, order: Map<String, Int>) {
+    fun printBenefit(date: Int, totalPrice: Int, order: Map<String, Int>) :Int {
         println()
         println("<혜택 내역>")
         val isEvent = checkEvent(totalPrice)
         if (!isEvent) {
             println("없음")
-            return
+            return 0
         }
-        printChristmasDDayEvent(date)
-        printWeekdayEvent(order, date)
-        printSpecialDiscount(date)
-        printGiftEvent(totalPrice)
+        var discountedTotal = printChristmasDDayEvent(date)
+        discountedTotal += printWeekdayEvent(order, date)
+        discountedTotal += printSpecialDiscount(date)
+        discountedTotal += printGiftEvent(totalPrice)
+
+        return discountedTotal
     }
 
-    fun printChristmasDDayEvent(date: Int) {
+    fun printChristmasDDayEvent(date: Int) :Int{
         val xmasDiscount = christmasDDayDiscount(date)
-        if (xmasDiscount == 0) return
+        if (xmasDiscount == 0) return 0
         val formatted = formatMoney(xmasDiscount)
         println("크리스마스 디데이 할인: -${formatted}")
+        return xmasDiscount
     }
 
-    fun printWeekdayEvent(order: Map<String, Int>, date: Int) {
+    fun printWeekdayEvent(order: Map<String, Int>, date: Int) : Int {
         val year = 2023
         val month = 12
         val isWeekend = checkWeekend(year, month, date)
@@ -193,17 +197,31 @@ class OutputView {
 
         val formatted = formatMoney(totalDiscount)
         println("${if (isWeekend) "주말" else "평일"} 할인: -${formatted}원")
+        return totalDiscount
     }
 
-    fun printSpecialDiscount(date: Int) {
-        if(!isStarSpecialDay(date)) return
+    fun printSpecialDiscount(date: Int) :Int {
+        if(!isStarSpecialDay(date)) return 0
         println("특별 할인: -1,000원")
+        return 1000
     }
 
-    fun printGiftEvent(totalPrice: Int) {
+    fun printGiftEvent(totalPrice: Int) :Int {
         val isGift = checkGift(totalPrice)
-        if (!isGift) return
+        if (!isGift) return 0
         println("증정 이벤트: -25,000원")
+        return 25_000
+    }
+
+    fun printTotalDiscount(totalDiscount: Int) {
+        println()
+        println("<총혜택 금액>")
+        val formatted = formatMoney(totalDiscount)
+        if (totalDiscount == 0) {
+            println("${formatted}원")
+            return
+        }
+        println("-${formatted}원")
     }
 }
 
@@ -211,7 +229,6 @@ fun isStarSpecialDay(date:Int) : Boolean{
     val specialDays = setOf(3, 10, 17, 24, 25, 31)
     return (date in specialDays)
 }
-
 fun calculateWeekendDiscount(order: Map<String, Int>): Int {
     return order.filter { (item, _) -> item in Main.entries.map { it.name } }
         .values.sum() * WEEK_DISCOUNT_PRICE
