@@ -1,5 +1,21 @@
 package christmas
 
+const val MUSHROOM_SOUP_PRICE = 6_000
+const val TAPAS_PRICE = 5_500
+const val CAESAR_SALAD_PRICE = 8_000
+
+const val T_BONE_STEAK_PRICE= 55_000
+const val BBQ_RIBS_PRICE = 54_000
+const val SEAFOOD_PASTA_PRICE = 35_000
+const val CHRISTMAS_PASTA_PRICE = 25_000
+
+const val CHOCOLATE_CAKE_PRICE = 15_000
+const val ICE_CREAM_PRICE = 5_000
+
+const val ZERO_COLA_PRICE = 3_000
+const val RED_WINE_PRICE = 60_000
+const val CHAMPAGNE_PRICE = 25_000
+
 fun main() {
     val input = InputView()
     val output = OutputView()
@@ -81,25 +97,25 @@ fun checkOrderValidity(order: Map<String, Int>): Boolean {
 }
 
 enum class Appetizer(val price: Int) {
-    MUSHROOM_SOUP(6_000),
-    TAPAS(5_500),
-    CAESAR_SALAD(8_000);
+    MUSHROOM_SOUP(MUSHROOM_SOUP_PRICE),
+    TAPAS(TAPAS_PRICE),
+    CAESAR_SALAD(CAESAR_SALAD_PRICE);
 }
 
 enum class Main(val price: Int) {
-    T_BONE_STEAK(55_000),
-    BBQ_RIBS(54_000),
-    SEAFOOD_PASTA(35_000),
-    CHRISTMAS_PASTA(25_000);
+    T_BONE_STEAK(T_BONE_STEAK_PRICE),
+    BBQ_RIBS(BBQ_RIBS_PRICE),
+    SEAFOOD_PASTA(SEAFOOD_PASTA_PRICE),
+    CHRISTMAS_PASTA(CHRISTMAS_PASTA_PRICE);
 }
 
 enum class Dessert(val price: Int) {
-    CHOCOLATE_CAKE(15_000),
-    ICE_CREAM(5_000);
+    CHOCOLATE_CAKE(CHOCOLATE_CAKE_PRICE),
+    ICE_CREAM(ICE_CREAM_PRICE);
 }
 
 enum class Beverage(val price: Int) {
-    ZERO_COLA(3_000),
-    RED_WINE(60_000),
-    CHAMPAGNE(25_000);
+    ZERO_COLA(ZERO_COLA_PRICE),
+    RED_WINE(RED_WINE_PRICE),
+    CHAMPAGNE(CHAMPAGNE_PRICE);
 }
