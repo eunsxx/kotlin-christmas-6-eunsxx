@@ -16,11 +16,14 @@ const val ZERO_COLA_PRICE = 3_000
 const val RED_WINE_PRICE = 60_000
 const val CHAMPAGNE_PRICE = 25_000
 
+const val START_DISCOUNT_PRICE = 1_000
+const val DISCOUNT_PRICE = 100
+
 fun main() {
     val input = InputView()
     val output = OutputView()
 
-    input.readDate()
+    val date = input.readDate()
 
     var order = input.readMenu()
     val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
@@ -30,10 +33,15 @@ fun main() {
     val totalPrice = calculateTotalPrice(mappingOrder)
     output.printTotalPrice(mappingOrder, totalPrice)
     output.printGift(totalPrice)
+    output.printBenefit(date, totalPrice)
 }
 
 fun checkGift(totalPrice : Int):Boolean {
     return totalPrice >= 120_000
+}
+
+fun checkEvent(totalPrice: Int) : Boolean {
+    return totalPrice >= 10_000
 }
 
 fun checkMenuRules(mappingOrder : Map<String, Int>) {
@@ -42,6 +50,10 @@ fun checkMenuRules(mappingOrder : Map<String, Int>) {
     }
 }
 
+fun christmasDDayDiscount(date: Int): Int {
+    if (date !in 1..25) return 0
+    return START_DISCOUNT_PRICE + ((date - 1) * DISCOUNT_PRICE)
+}
 class InputView {
     fun readDate(): Int {
         println("12월 중 식당 예상 방문 날짜는 언제인가요? (숫자만 입력해 주세요!)")
@@ -135,6 +147,24 @@ class OutputView {
         println("<증정 메뉴>")
         val isGift = checkGift(totalPrice)
         println(if (isGift) "샴페인 1개" else "없음")
+    }
+
+    fun printBenefit(date: Int, totalPrice: Int) {
+        println()
+        println("<혜택 내역>")
+        val isEvent = checkEvent(totalPrice)
+        if (!isEvent) {
+            println("없음")
+            return
+        }
+        printChristmasDDayEvent(date)
+
+    }
+
+    fun printChristmasDDayEvent(date: Int) {
+        val xmasDiscount = christmasDDayDiscount(date)
+        var formatted = String.format("%,d", xmasDiscount)
+        println("크리스마스 디데이 할인 -${formatted}")
     }
 }
 
