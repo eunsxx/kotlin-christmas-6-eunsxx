@@ -39,6 +39,8 @@ fun main() {
     output.printGift(totalPrice)
     val totalDiscount = output.printBenefit(date, totalPrice, mappingOrder)
     output.printTotalDiscount(totalDiscount)
+    output.estimatedPaymentAmount(totalPrice, totalDiscount)
+    output.printEventBedge(totalDiscount)
 }
 fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
     val date = LocalDate.of(year, month, day)
@@ -223,6 +225,29 @@ class OutputView {
         }
         println("-${formatted}원")
     }
+
+    fun estimatedPaymentAmount(totalPrice: Int, totalDiscount: Int) {
+        var paymentAmount = totalPrice - totalDiscount
+        println()
+        println("<할인 후 예상 결제 금액>")
+        if (totalPrice >= 120_000) paymentAmount += 25_000
+        val formatted = formatMoney(paymentAmount)
+        println("${formatted}원")
+    }
+
+    fun printEventBedge(totalDiscount: Int) {
+        val bedge = selectEventBedge(totalDiscount)
+        println()
+        println("<12월 이벤트 배지>")
+        println(bedge)
+    }
+}
+
+fun selectEventBedge(totalDiscount: Int): String {
+    if (totalDiscount >= 20_000) return "산타"
+    if (totalDiscount >= 10_000) return "트리"
+    if (totalDiscount >= 5_000) return "별"
+    return "없음"
 }
 
 fun isStarSpecialDay(date:Int) : Boolean{
