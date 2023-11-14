@@ -20,11 +20,20 @@ fun main() {
     val input = InputView()
     val output = OutputView()
 
-    val date = input.readDate()
-    println("date : ${date}일")
-    var order = input.readMenu()
-    output.printMenu(order)
+    input.readDate()
 
+    var order = input.readMenu()
+    val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
+
+    println("12월 3일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
+    output.printMenu(order)
+    val totalPrice = calculateTotalPrice(mappingOrder)
+    output.printTotalPrice(mappingOrder, totalPrice)
+    output.printGift(totalPrice)
+}
+
+fun checkGift(totalPrice : Int):Boolean {
+    return totalPrice >= 120_000
 }
 
 fun checkMenuRules(mappingOrder : Map<String, Int>) {
@@ -70,12 +79,11 @@ fun calculateTotalPrice(order: Map<String, Int>): Int {
     var totalPrice = 0
 
     order.forEach { (item, quantity) ->
-        val enumName = translateToEnglishName(item)
         totalPrice += when {
-            enumName in Appetizer.entries.map { it.name } -> Appetizer.valueOf(enumName).price * quantity
-            enumName in Main.entries.map { it.name } -> Main.valueOf(enumName).price * quantity
-            enumName in Dessert.entries.map { it.name } -> Dessert.valueOf(enumName).price * quantity
-            enumName in Beverage.entries.map { it.name } -> Beverage.valueOf(enumName).price * quantity
+            item in Appetizer.entries.map { it.name } -> Appetizer.valueOf(item).price * quantity
+            item in Main.entries.map { it.name } -> Main.valueOf(item).price * quantity
+            item in Dessert.entries.map { it.name } -> Dessert.valueOf(item).price * quantity
+            item in Beverage.entries.map { it.name } -> Beverage.valueOf(item).price * quantity
             else -> 0
         }
     }
@@ -108,47 +116,61 @@ fun parseOrder(input: String): Map<String, Int> {
 
 class OutputView {
     fun printMenu(orderedItems: Map<String, Int>) {
+        println()
         println("<주문 메뉴>")
         orderedItems.forEach { (menu, quantity) ->
             println("${menu} ${quantity}개")
         }
     }
+
+    fun printTotalPrice(mappingOrder: Map<String, Int>, totalPrice: Int) {
+        println()
+        println("<할인 전 총주문 금액>")
+        val formatted = String.format("%,d", totalPrice)
+        println("${formatted}원")
+    }
+
+    fun printGift(totalPrice: Int) {
+        println()
+        println("<증정 메뉴>")
+        val isGift = checkGift(totalPrice)
+        println(if (isGift) "샴페인 1개" else "없음")
+    }
 }
 
-fun isValidMenuItem(order: Map<String, Int>): Boolean {
+fun isMenuInList(order: Map<String, Int>): Boolean {
     val validMenuItems = Appetizer.entries.map { it.name } +
             Main.entries.map { it.name } +
             Dessert.entries.map { it.name } +
             Beverage.entries.map { it.name }
-
-    // 주문된 아이템이 전체 메뉴 집합에 포함되어 있는지 검사합니다.
-    if (!order.keys.all { it in validMenuItems }) {
-        println("메뉴판에 없는 메뉴입니다.")
-        return false
-    }
-
-    if (order.values.any {it < 1}) {
-        println("수량을 1개 이상으로 입력해주세요")
-        return false
-    }
-
-    if (order.keys.distinct().size != order.size) {
-        println("중복된 값을 사용할 수 없습니다")
-        return false
-    }
-
-    // 애피타이저, 메인, 디저트 중 하나라도 주문되었는지 확인합니다.
-    val hasValidCategory = order.keys.any { it in Appetizer.values().map { it.name } ||
-            it in Main.values().map { it.name } ||
-            it in Dessert.values().map { it.name } }
-
-    // 음료만 주문한 경우는 무효로 처리합니다.
-    return hasValidCategory
+    return order.keys.all { it in validMenuItems }
 }
 
+fun isQuantityValid(order: Map<String, Int>): Boolean {
+    return !order.values.any { it < 1 }
+}
+
+fun isTotalItemsWithinLimit(order: Map<String, Int>, limit: Int): Boolean {
+    val totalItems = order.values.sum()
+    return totalItems <= limit
+}
+
+fun hasNoDuplicateItems(order: Map<String, Int>): Boolean {
+    return order.keys.distinct().size == order.size
+}
+
+fun hasValidCategory(order: Map<String, Int>): Boolean {
+    val hasValidCategory = order.keys.any { it in Appetizer.entries.map { it.name } ||
+            it in Main.entries.map { it.name } ||
+            it in Dessert.values().map { it.name } }
+    return hasValidCategory
+}
 fun checkOrderValidity(order: Map<String, Int>): Boolean {
-    if (!isValidMenuItem(order)) return false
-    return true
+    return isMenuInList(order) &&
+            isQuantityValid(order) &&
+            isTotalItemsWithinLimit(order, 20) &&
+            hasNoDuplicateItems(order) &&
+            hasValidCategory(order)
 }
 
 enum class Appetizer(val price: Int) {
