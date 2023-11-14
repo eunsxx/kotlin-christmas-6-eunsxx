@@ -10,6 +10,8 @@ fun main() {
     var order = input.readMenu()
     output.printMenu(order)
 
+    val isValid = checkOrderValidity(order)
+    println(if (isValid) "유효한 주문입니다." else "주문에 유효하지 않은 항목이 포함되어 있습니다.")
 
 }
 
@@ -50,6 +52,32 @@ class OutputView {
         }
     }
     // ...
+}
+
+fun isValidMenuItem(order: Map<String, Int>): Boolean {
+    val appetizerMenuItems = setOf("양송이수프", "타파스", "시저샐러드")
+    val mainMenuItems = setOf("티본스테이크", "바비큐립", "해산물파스타", "크리스마스파스타")
+    val dessertMenuItems = setOf("초코케이크", "아이스크림")
+    val beverageMenuItems = setOf("제로콜라", "레드와인", "샴페인")
+
+    // 모든 메뉴 항목을 하나의 집합으로 합칩니다.
+    val allMenuItems = appetizerMenuItems + mainMenuItems + dessertMenuItems + beverageMenuItems
+
+    // 주문된 아이템이 전체 메뉴 집합에 포함되어 있는지 검사합니다.
+    if (!order.keys.all { it in allMenuItems }) {
+        return false // 유효하지 않은 메뉴 항목이 포함되어 있음
+    }
+
+    // 애피타이저, 메인, 디저트 중 하나라도 주문되었는지 확인합니다.
+    val hasValidCategory = order.keys.any { it in appetizerMenuItems || it in mainMenuItems || it in dessertMenuItems }
+
+    // 음료만 주문한 경우는 무효로 처리합니다.
+    return hasValidCategory
+}
+
+fun checkOrderValidity(order: Map<String, Int>): Boolean {
+    if (!isValidMenuItem(order)) return false
+    return true
 }
 
 enum class Appetizer(val price: Int) {
