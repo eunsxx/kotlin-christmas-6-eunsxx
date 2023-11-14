@@ -1,5 +1,8 @@
 package christmas
 
+import java.time.DayOfWeek
+import java.time.LocalDate
+
 const val MUSHROOM_SOUP_PRICE = 6_000
 const val TAPAS_PRICE = 5_500
 const val CAESAR_SALAD_PRICE = 8_000
@@ -18,6 +21,7 @@ const val CHAMPAGNE_PRICE = 25_000
 
 const val START_DISCOUNT_PRICE = 1_000
 const val DISCOUNT_PRICE = 100
+const val WEEK_DISCOUNT_PRICE = 2_023
 
 fun main() {
     val input = InputView()
@@ -25,15 +29,23 @@ fun main() {
 
     val date = input.readDate()
 
-    var order = input.readMenu()
+    val order = input.readMenu()
     val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
 
-    println("12월 3일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
+    println("12월 ${date}일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
     output.printMenu(order)
     val totalPrice = calculateTotalPrice(mappingOrder)
-    output.printTotalPrice(mappingOrder, totalPrice)
+    output.printTotalPrice(totalPrice)
     output.printGift(totalPrice)
-    output.printBenefit(date, totalPrice)
+    output.printBenefit(date, totalPrice, mappingOrder)
+
+
+}
+fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
+    val date = LocalDate.of(year, month, day)
+    val dayOfWeek = date.dayOfWeek
+
+    return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY
 }
 
 fun checkGift(totalPrice : Int):Boolean {
@@ -135,10 +147,10 @@ class OutputView {
         }
     }
 
-    fun printTotalPrice(mappingOrder: Map<String, Int>, totalPrice: Int) {
+    fun printTotalPrice(totalPrice: Int) {
         println()
         println("<할인 전 총주문 금액>")
-        val formatted = String.format("%,d", totalPrice)
+        val formatted = formatMoney(totalPrice)
         println("${formatted}원")
     }
 
@@ -149,7 +161,7 @@ class OutputView {
         println(if (isGift) "샴페인 1개" else "없음")
     }
 
-    fun printBenefit(date: Int, totalPrice: Int) {
+    fun printBenefit(date: Int, totalPrice: Int, order: Map<String, Int>) {
         println()
         println("<혜택 내역>")
         val isEvent = checkEvent(totalPrice)
@@ -158,16 +170,42 @@ class OutputView {
             return
         }
         printChristmasDDayEvent(date)
-
+        printWeekdayEvent(order, date)
     }
 
     fun printChristmasDDayEvent(date: Int) {
         val xmasDiscount = christmasDDayDiscount(date)
-        var formatted = String.format("%,d", xmasDiscount)
+        val formatted = formatMoney(xmasDiscount)
         println("크리스마스 디데이 할인 -${formatted}")
     }
+
+    fun printWeekdayEvent(order: Map<String, Int>, date: Int) {
+        val year = 2023
+        val month = 12
+        val isWeekend = checkWeekend(year, month, date)
+
+        val totalDiscount = if (isWeekend) {
+            calculateWeekendDiscount(order)
+        } else {
+            calculateWeekdayDiscount(order)
+        }
+
+        val formatted = formatMoney(totalDiscount)
+        println("${if (isWeekend) "주말" else "평일"} 할인: -${formatted}원")
+    }
+}
+fun calculateWeekendDiscount(order: Map<String, Int>): Int {
+    return order.filter { (item, _) -> item in Main.entries.map { it.name } }
+        .values.sum() * WEEK_DISCOUNT_PRICE
 }
 
+fun calculateWeekdayDiscount(order: Map<String, Int>): Int {
+    return order.count { (item, _) -> item in Dessert.entries.map { it.name } } * WEEK_DISCOUNT_PRICE
+}
+
+fun formatMoney(discount: Int): String {
+    return String.format("%,d", discount)
+}
 fun isMenuInList(order: Map<String, Int>): Boolean {
     val validMenuItems = Appetizer.entries.map { it.name } +
             Main.entries.map { it.name } +
@@ -192,7 +230,7 @@ fun hasNoDuplicateItems(order: Map<String, Int>): Boolean {
 fun hasValidCategory(order: Map<String, Int>): Boolean {
     val hasValidCategory = order.keys.any { it in Appetizer.entries.map { it.name } ||
             it in Main.entries.map { it.name } ||
-            it in Dessert.values().map { it.name } }
+            it in Dessert.entries.map { it.name } }
     return hasValidCategory
 }
 fun checkOrderValidity(order: Map<String, Int>): Boolean {
