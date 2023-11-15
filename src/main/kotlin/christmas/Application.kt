@@ -24,23 +24,28 @@ const val DISCOUNT_PRICE = 100
 const val WEEK_DISCOUNT_PRICE = 2_023
 
 fun main() {
-    val input = InputView()
-    val output = OutputView()
+    try {
+        val input = InputView()
+        val output = OutputView()
 
-    val date = input.readDate()
+        val date = input.readDate()
+        val order = input.readMenu()
 
-    val order = input.readMenu()
-    val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
+        val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
 
-    println("12월 ${date}일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
-    output.printMenu(order)
-    val totalPrice = calculateTotalPrice(mappingOrder)
-    output.printTotalPrice(totalPrice)
-    output.printGift(totalPrice)
-    val totalDiscount = output.printBenefit(date, totalPrice, mappingOrder)
-    output.printTotalDiscount(totalDiscount)
-    output.estimatedPaymentAmount(totalPrice, totalDiscount)
-    output.printEventBedge(totalDiscount)
+        println("12월 ${date}일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
+        output.printMenu(order)
+        val totalPrice = calculateTotalPrice(mappingOrder)
+        output.printTotalPrice(totalPrice)
+        output.printGift(totalPrice)
+        output.printBenefit(date, totalPrice, mappingOrder)
+        val totalDiscount = discountedTotal(date, totalPrice, mappingOrder)
+        output.printTotalDiscount(totalDiscount)
+        output.estimatedPaymentAmount(totalPrice, totalDiscount)
+        output.printEventBedge(totalDiscount)
+    } catch (e: IllegalArgumentException) {
+        println(e.message)
+    }
 }
 fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
     val date = LocalDate.of(year, month, day)
@@ -67,37 +72,23 @@ fun christmasDDayDiscount(date: Int): Int {
     if (date !in 1..25) return 0
     return START_DISCOUNT_PRICE + ((date - 1) * DISCOUNT_PRICE)
 }
+
 class InputView {
     fun readDate(): Int {
         println("12월 중 식당 예상 방문 날짜는 언제인가요? (숫자만 입력해 주세요!)")
-        val input = readlnOrNull() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 날짜입니다. 다시 입력해 주세요")
-
-        return try {
-            val date = input.toIntOrNull() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 날짜입니다. 다시 입력해 주세요")
-
-            if (date !in 1..31) {
-                throw IllegalArgumentException("[ERROR] 유효하지 않은 날짜입니다. 다시 입력해 주세요")
-            }
-            date
-        } catch (e: IllegalArgumentException) {
-            println(e.message)
-            readDate()
-        }
+        val date = readLine()?.toIntOrNull() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 날짜입니다. 다시 입력해 주세요.")
+        require(date in 1..31) { "[ERROR] 1부터 31 사이의 숫자를 입력해 주세요." }
+        return date
     }
 
     fun readMenu(): Map<String, Int> {
-        return try {
-            println("주문하실 메뉴를 메뉴와 개수를 알려 주세요. (e.g. 해산물파스타-2,레드와인-1,초코케이크-1)")
-            val input = readln()
-            val order = parseOrder(input)
-            val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
-            checkMenuRules(mappingOrder)
+        println("주문하실 메뉴를 메뉴와 개수를 알려 주세요. (e.g. 해산물파스타-2,레드와인-1,초코케이크-1)")
+        val input = readLine() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+        val order = parseOrder(input)
+        val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
+        checkMenuRules(mappingOrder)
 
-            order
-        } catch(e: IllegalArgumentException) {
-            println(e.message)
-            readMenu()
-        }
+        return order
     }
 }
 fun calculateTotalPrice(order: Map<String, Int>): Int {
@@ -134,11 +125,24 @@ fun translateToEnglishName(menuName: String): String {
 }
 fun parseOrder(input: String): Map<String, Int> {
     return input.split(",").map { item ->
-        val (menu, quantity) = item.split("-")
-        menu.trim() to quantity.trim().toInt()
+        val parts = item.split("-")
+        if (parts.size != 2) throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+        val menu = parts[0].trim()
+        val quantity = parts[1].trim().toIntOrNull() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+        menu to quantity
     }.toMap()
 }
+fun discountedTotal(date: Int, totalPrice: Int, order: Map<String, Int>) :Int {
+    val discountFunctions = listOf(
+        { calculateChristmasDDayEvent(date) },
+        { calculateWeekdayEvent(order,date) },
+        { calculateSpecialDiscount(date) },
+        { calculateGiftEvent(totalPrice) }
+    )
 
+    return discountFunctions.sumOf { it() }
+
+}
 class OutputView {
     fun printMenu(orderedItems: Map<String, Int>) {
         println()
@@ -162,57 +166,46 @@ class OutputView {
         println(if (isGift) "샴페인 1개" else "없음")
     }
 
-    fun printBenefit(date: Int, totalPrice: Int, order: Map<String, Int>) :Int {
+    fun printBenefit(date: Int, totalPrice: Int, order: Map<String, Int>){
         println()
         println("<혜택 내역>")
         val isEvent = checkEvent(totalPrice)
         if (!isEvent) {
             println("없음")
-            return 0
+            return
         }
-        var discountedTotal = printChristmasDDayEvent(date)
-        discountedTotal += printWeekdayEvent(order, date)
-        discountedTotal += printSpecialDiscount(date)
-        discountedTotal += printGiftEvent(totalPrice)
-
-        return discountedTotal
+        printChristmasDDayEvent(date)
+        printWeekdayEvent(order, date)
+        printSpecialDiscount(date)
+        printGiftEvent(totalPrice)
     }
 
-    fun printChristmasDDayEvent(date: Int) :Int{
-        val xmasDiscount = christmasDDayDiscount(date)
-        if (xmasDiscount == 0) return 0
+    private fun printChristmasDDayEvent(date: Int){
+        val xmasDiscount = calculateChristmasDDayEvent(date)
         val formatted = formatMoney(xmasDiscount)
         println("크리스마스 디데이 할인: -${formatted}")
-        return xmasDiscount
     }
 
-    fun printWeekdayEvent(order: Map<String, Int>, date: Int) : Int {
+    private fun printWeekdayEvent(order: Map<String, Int>, date: Int) {
         val year = 2023
         val month = 12
         val isWeekend = checkWeekend(year, month, date)
 
-        val totalDiscount = if (isWeekend) {
-            calculateWeekendDiscount(order)
-        } else {
-            calculateWeekdayDiscount(order)
-        }
-
+        val totalDiscount = calculateWeekdayEvent(order, date)
         val formatted = formatMoney(totalDiscount)
         println("${if (isWeekend) "주말" else "평일"} 할인: -${formatted}원")
-        return totalDiscount
     }
 
-    fun printSpecialDiscount(date: Int) :Int {
-        if(!isStarSpecialDay(date)) return 0
-        println("특별 할인: -1,000원")
-        return 1000
+    private fun printSpecialDiscount(date: Int) {
+        val discounted = calculateSpecialDiscount(date)
+        if (discounted == 0) return
+        println("특별 할인: -${discounted}원")
     }
 
-    fun printGiftEvent(totalPrice: Int) :Int {
-        val isGift = checkGift(totalPrice)
-        if (!isGift) return 0
-        println("증정 이벤트: -25,000원")
-        return 25_000
+    private fun printGiftEvent(totalPrice: Int) {
+        val discounted = calculateGiftEvent(totalPrice)
+        if (discounted == 0) return
+        println("증정 이벤트: -${discounted}원")
     }
 
     fun printTotalDiscount(totalDiscount: Int) {
@@ -241,6 +234,37 @@ class OutputView {
         println("<12월 이벤트 배지>")
         println(bedge)
     }
+}
+
+fun calculateChristmasDDayEvent(date: Int) :Int{
+    val xmasDiscount = christmasDDayDiscount(date)
+    if (xmasDiscount == 0) return 0
+    return xmasDiscount
+}
+
+fun calculateWeekdayEvent(order: Map<String, Int>, date: Int) : Int {
+    val year = 2023
+    val month = 12
+    val isWeekend = checkWeekend(year, month, date)
+
+    val totalDiscount = if (isWeekend) {
+        calculateWeekendDiscount(order)
+    } else {
+        calculateWeekdayDiscount(order)
+    }
+
+    return totalDiscount
+}
+
+fun calculateSpecialDiscount(date: Int) :Int {
+    if(!isStarSpecialDay(date)) return 0
+    return 1000
+}
+
+fun calculateGiftEvent(totalPrice: Int) :Int {
+    val isGift = checkGift(totalPrice)
+    if (!isGift) return 0
+    return 25_000
 }
 
 fun selectEventBedge(totalDiscount: Int): String {
