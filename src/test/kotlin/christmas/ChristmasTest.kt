@@ -90,6 +90,52 @@ class InputViewTest: NsTest() {
         assertEquals(expectedTotalPrice, calculateTotalPrice(mappingOrder))
     }
 
+    @Test
+    fun `크리스마스 디데이 할인 계산`() {
+        val date = 5 // 12월 5일
+        val expectedDiscount = START_DISCOUNT_PRICE + ((date - 1) * DISCOUNT_PRICE)
+        assertEquals(expectedDiscount, calculateChristmasDDayEvent(date))
+    }
+
+    @Test
+    fun `주말 할인 계산`() {
+        val order = mapOf("티본스테이크" to 2) // 주말에 티본스테이크 2개 주문
+        val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
+        val date = 3 // 주말 (일요일)
+        val expectedDiscount = 2 * WEEK_DISCOUNT_PRICE
+        assertEquals(expectedDiscount, calculateWeekdayEvent(mappingOrder, date))
+    }
+
+    @Test
+    fun `특별 할인 계산`() {
+        val specialDay = 17 // 특별 할인이 적용되는 날
+        val expectedDiscount = 1000 // 특별 할인 금액
+        assertEquals(expectedDiscount, calculateSpecialDiscount(specialDay))
+    }
+
+    @Test
+    fun `증정 이벤트 계산`() {
+        val totalPrice = 130_000 // 12만원 이상 주문 시 증정 이벤트 적용
+        val expectedDiscount = 25_000 // 증정 이벤트 할인 금액
+        assertEquals(expectedDiscount, calculateGiftEvent(totalPrice))
+    }
+
+    @Test
+    fun `총 할인 금액 계산`() {
+        val date = 10 // 12월 10일
+        val totalPrice = 150_000
+        val order = mapOf("티본스테이크" to 1, "초코케이크" to 2)
+        val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
+
+        val totalDiscount = discountedTotal(date, totalPrice, mappingOrder)
+
+        val expectedDiscount = calculateChristmasDDayEvent(date) +
+                calculateWeekdayEvent(mappingOrder, date) +
+                calculateSpecialDiscount(date) +
+                calculateGiftEvent(totalPrice)
+
+        assertEquals(expectedDiscount, totalDiscount)
+    }
 
     override fun runMain() {
         main()
