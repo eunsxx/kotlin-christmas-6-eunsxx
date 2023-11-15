@@ -77,7 +77,18 @@ class InputViewTest: NsTest() {
         assertFalse(checkOrderValidity(mappingOrder))
     }
 
-
+    @Test
+    fun `다양한 메뉴와 수량에 대한 총 주문 금액 계산`() {
+        val order = mapOf(
+            "티본스테이크" to 1,
+            "해산물파스타" to 2,
+            "초코케이크" to 3,
+            "제로콜라" to 4
+        )
+        val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
+        val expectedTotalPrice = T_BONE_STEAK_PRICE + (SEAFOOD_PASTA_PRICE * 2) + (CHOCOLATE_CAKE_PRICE * 3) + (ZERO_COLA_PRICE * 4)
+        assertEquals(expectedTotalPrice, calculateTotalPrice(mappingOrder))
+    }
 
 
     override fun runMain() {
