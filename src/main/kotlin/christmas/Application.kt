@@ -141,13 +141,15 @@ class OutputView {
     private fun printSpecialDiscount(date: Int) {
         val discounted = calculateSpecialDiscount(date)
         if (discounted == 0) return
-        println("특별 할인: -${discounted}원")
+        val formatted = formatMoney(discounted)
+        println("특별 할인: -${formatted}원")
     }
 
     private fun printGiftEvent(totalPrice: Int) {
         val discounted = calculateGiftEvent(totalPrice)
         if (discounted == 0) return
-        println("증정 이벤트: -${discounted}원")
+        val formatted = formatMoney(discounted)
+        println("증정 이벤트: -${formatted}원")
     }
 
     fun printTotalDiscount(totalDiscount: Int) {
