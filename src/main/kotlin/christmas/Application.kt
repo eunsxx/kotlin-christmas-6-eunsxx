@@ -126,7 +126,7 @@ class OutputView {
         val xmasDiscount = calculateChristmasDDayEvent(date)
         if(xmasDiscount == 0) return
         val formatted = formatMoney(xmasDiscount)
-        println("크리스마스 디데이 할인: -${formatted}")
+        println("크리스마스 디데이 할인: -${formatted}원")
     }
 
     private fun printWeekdayEvent(order: Map<String, Int>, date: Int) {
@@ -273,7 +273,7 @@ fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
     val date = LocalDate.of(year, month, day)
     val dayOfWeek = date.dayOfWeek
 
-    return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY
+    return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.FRIDAY
 }
 fun checkGift(totalPrice : Int):Boolean {
     return totalPrice >= 120_000
@@ -297,11 +297,11 @@ fun isStarSpecialDay(date:Int) : Boolean{
     return (date in specialDays)
 }
 fun calculateWeekendDiscount(order: Map<String, Int>): Int {
-    return order.filter { (item, _) -> item in Main.entries.map { it.name } }
-        .values.sum() * WEEK_DISCOUNT_PRICE
+    return order.filter { (item, _) -> item in Main.entries.map { it.name } }.values.sum() * WEEK_DISCOUNT_PRICE
 }
 fun calculateWeekdayDiscount(order: Map<String, Int>): Int {
-    return order.count { (item, _) -> item in Dessert.entries.map { it.name } } * WEEK_DISCOUNT_PRICE
+    return order.filter { (item, _) -> item in Dessert.entries.map { it.name } }.values.sum() * WEEK_DISCOUNT_PRICE
+
 }
 fun formatMoney(discount: Int): String {
     return String.format("%,d", discount)
