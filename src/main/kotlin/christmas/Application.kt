@@ -39,51 +39,23 @@ val menuMapping = mapOf(
     "샴페인" to "CHAMPAGNE"
 )
 fun main() {
-    val input = InputView()
+    val (date, order) = readInput()
     val output = OutputView()
-
-    val date = input.readDate()
-    val order = input.readMenu()
-
     val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
 
-    println("12월 ${date}일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
-    output.printMenu(order)
+    output.printMenuMessage(date, order)
+
     val totalPrice = calculateTotalPrice(mappingOrder)
-    output.printTotalPrice(totalPrice)
-    output.printGift(totalPrice)
-    output.printBenefit(date, totalPrice, mappingOrder)
-    val totalDiscount = discountedTotal(date, totalPrice, mappingOrder)
-    output.printTotalDiscount(totalDiscount)
-    output.estimatedPaymentAmount(totalPrice, totalDiscount)
-    output.printEventBedge(totalDiscount)
-}
-fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
-    val date = LocalDate.of(year, month, day)
-    val dayOfWeek = date.dayOfWeek
+    output.printEventList(totalPrice, date, mappingOrder)
 
-    return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY
 }
 
-fun checkGift(totalPrice : Int):Boolean {
-    return totalPrice >= 120_000
+fun readInput(): Pair<Int, Map<String, Int>> {
+    val input = InputView()
+    val date = input.readDate()
+    val order = input.readMenu()
+    return Pair(date, order)
 }
-
-fun checkEvent(totalPrice: Int) : Boolean {
-    return totalPrice >= 10_000
-}
-
-fun checkMenuRules(mappingOrder : Map<String, Int>) {
-    if (!checkOrderValidity(mappingOrder)) {
-        throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
-    }
-}
-
-fun christmasDDayDiscount(date: Int): Int {
-    if (date !in 1..25) return 0
-    return START_DISCOUNT_PRICE + ((date - 1) * DISCOUNT_PRICE)
-}
-
 class InputView {
     fun readDate(): Int {
         return try {
@@ -112,45 +84,6 @@ class InputView {
             readMenu()
         }
     }
-}
-fun calculateTotalPrice(order: Map<String, Int>): Int {
-    var totalPrice = 0
-
-    order.forEach { (item, quantity) ->
-        totalPrice += when {
-            item in Appetizer.entries.map { it.name } -> Appetizer.valueOf(item).price * quantity
-            item in Main.entries.map { it.name } -> Main.valueOf(item).price * quantity
-            item in Dessert.entries.map { it.name } -> Dessert.valueOf(item).price * quantity
-            item in Beverage.entries.map { it.name } -> Beverage.valueOf(item).price * quantity
-            else -> 0
-        }
-    }
-
-    return totalPrice
-}
-
-fun translateToEnglishName(menuName: String): String {
-    return menuMapping[menuName] ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
-}
-fun parseOrder(input: String): Map<String, Int> {
-    return input.split(",").map { item ->
-        val parts = item.split("-")
-        if (parts.size != 2) throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
-        val menu = parts[0].trim()
-        val quantity = parts[1].trim().toIntOrNull() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
-        menu to quantity
-    }.toMap()
-}
-fun discountedTotal(date: Int, totalPrice: Int, order: Map<String, Int>) :Int {
-    val discountFunctions = listOf(
-        { calculateChristmasDDayEvent(date) },
-        { calculateWeekdayEvent(order,date) },
-        { calculateSpecialDiscount(date) },
-        { calculateGiftEvent(totalPrice) }
-    )
-
-    return discountFunctions.sumOf { it() }
-
 }
 class OutputView {
     fun printMenu(orderedItems: Map<String, Int>) {
@@ -222,7 +155,7 @@ class OutputView {
         println("<총혜택 금액>")
         val formatted = formatMoney(totalDiscount)
         if (totalDiscount == 0) {
-            println("${formatted}원")
+            println("0원")
             return
         }
         println("-${formatted}원")
@@ -243,14 +176,73 @@ class OutputView {
         println("<12월 이벤트 배지>")
         println(bedge)
     }
+
+    fun printMenuMessage(date: Int, order: Map<String, Int>) {
+        println("12월 ${date}일에 우테코 식당에서 받을 이벤트 혜택 미리 보기!")
+        printMenu(order)
+    }
+
+    fun printEventList(totalPrice: Int, date: Int, order: Map<String, Int>) {
+        printTotalPrice(totalPrice)
+        printGift(totalPrice)
+        printBenefit(date, totalPrice, order)
+
+        val totalDiscount = discountedTotal(date, totalPrice, order)
+        printTotalDiscount(totalDiscount)
+        estimatedPaymentAmount(totalPrice, totalDiscount)
+        printEventBedge(totalDiscount)
+    }
 }
 
+fun translateToEnglishName(menuName: String): String {
+    return menuMapping[menuName] ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+}
+fun parseOrder(input: String): Map<String, Int> {
+    return input.split(",").map { item ->
+        val parts = item.split("-")
+        if (parts.size != 2) throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+        val menu = parts[0].trim()
+        val quantity = parts[1].trim().toIntOrNull() ?: throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+        menu to quantity
+    }.toMap()
+}
+fun discountedTotal(date: Int, totalPrice: Int, order: Map<String, Int>) :Int {
+    if (!checkEvent(totalPrice)) return 0
+    val discountFunctions = listOf(
+        { calculateChristmasDDayEvent(date) },
+        { calculateWeekdayEvent(order,date) },
+        { calculateSpecialDiscount(date) },
+        { calculateGiftEvent(totalPrice) }
+    )
+
+    return discountFunctions.sumOf { it() }
+
+}
+
+fun christmasDDayDiscount(date: Int): Int {
+    if (date !in 1..25) return 0
+    return START_DISCOUNT_PRICE + ((date - 1) * DISCOUNT_PRICE)
+}
+fun calculateTotalPrice(order: Map<String, Int>): Int {
+    var totalPrice = 0
+
+    order.forEach { (item, quantity) ->
+        totalPrice += when {
+            item in Appetizer.entries.map { it.name } -> Appetizer.valueOf(item).price * quantity
+            item in Main.entries.map { it.name } -> Main.valueOf(item).price * quantity
+            item in Dessert.entries.map { it.name } -> Dessert.valueOf(item).price * quantity
+            item in Beverage.entries.map { it.name } -> Beverage.valueOf(item).price * quantity
+            else -> 0
+        }
+    }
+
+    return totalPrice
+}
 fun calculateChristmasDDayEvent(date: Int) :Int{
     val xmasDiscount = christmasDDayDiscount(date)
     if (xmasDiscount == 0) return 0
     return xmasDiscount
 }
-
 fun calculateWeekdayEvent(order: Map<String, Int>, date: Int) : Int {
     val year = 2023
     val month = 12
@@ -264,25 +256,39 @@ fun calculateWeekdayEvent(order: Map<String, Int>, date: Int) : Int {
 
     return totalDiscount
 }
-
 fun calculateSpecialDiscount(date: Int) :Int {
     if(!isStarSpecialDay(date)) return 0
     return 1000
 }
-
 fun calculateGiftEvent(totalPrice: Int) :Int {
     val isGift = checkGift(totalPrice)
     if (!isGift) return 0
     return 25_000
 }
 
+fun checkWeekend(year: Int, month: Int, day: Int): Boolean {
+    val date = LocalDate.of(year, month, day)
+    val dayOfWeek = date.dayOfWeek
+
+    return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY
+}
+fun checkGift(totalPrice : Int):Boolean {
+    return totalPrice >= 120_000
+}
+fun checkEvent(totalPrice: Int) : Boolean {
+    return totalPrice >= 10_000
+}
+fun checkMenuRules(mappingOrder : Map<String, Int>) {
+    if (!checkOrderValidity(mappingOrder)) {
+        throw IllegalArgumentException("[ERROR] 유효하지 않은 주문입니다. 다시 입력해 주세요.")
+    }
+}
 fun selectEventBedge(totalDiscount: Int): String {
     if (totalDiscount >= 20_000) return "산타"
     if (totalDiscount >= 10_000) return "트리"
     if (totalDiscount >= 5_000) return "별"
     return "없음"
 }
-
 fun isStarSpecialDay(date:Int) : Boolean{
     val specialDays = setOf(3, 10, 17, 24, 25, 31)
     return (date in specialDays)
@@ -291,11 +297,9 @@ fun calculateWeekendDiscount(order: Map<String, Int>): Int {
     return order.filter { (item, _) -> item in Main.entries.map { it.name } }
         .values.sum() * WEEK_DISCOUNT_PRICE
 }
-
 fun calculateWeekdayDiscount(order: Map<String, Int>): Int {
     return order.count { (item, _) -> item in Dessert.entries.map { it.name } } * WEEK_DISCOUNT_PRICE
 }
-
 fun formatMoney(discount: Int): String {
     return String.format("%,d", discount)
 }
@@ -306,20 +310,16 @@ fun isMenuInList(order: Map<String, Int>): Boolean {
             Beverage.entries.map { it.name }
     return order.keys.all { it in validMenuItems }
 }
-
 fun isQuantityValid(order: Map<String, Int>): Boolean {
     return !order.values.any { it < 1 }
 }
-
 fun isTotalItemsWithinLimit(order: Map<String, Int>, limit: Int): Boolean {
     val totalItems = order.values.sum()
     return totalItems <= limit
 }
-
 fun hasNoDuplicateItems(order: Map<String, Int>): Boolean {
     return order.keys.distinct().size == order.size
 }
-
 fun hasValidCategory(order: Map<String, Int>): Boolean {
     val hasValidCategory = order.keys.any { it in Appetizer.entries.map { it.name } ||
             it in Main.entries.map { it.name } ||
