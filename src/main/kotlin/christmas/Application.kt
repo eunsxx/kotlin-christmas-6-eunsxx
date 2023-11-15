@@ -124,6 +124,7 @@ class OutputView {
 
     private fun printChristmasDDayEvent(date: Int){
         val xmasDiscount = calculateChristmasDDayEvent(date)
+        if(xmasDiscount == 0) return
         val formatted = formatMoney(xmasDiscount)
         println("크리스마스 디데이 할인: -${formatted}")
     }
