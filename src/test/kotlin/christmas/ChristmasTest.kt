@@ -101,7 +101,7 @@ class InputViewTest: NsTest() {
     fun `주말 할인 계산`() {
         val order = mapOf("티본스테이크" to 2) // 주말에 티본스테이크 2개 주문
         val mappingOrder = order.mapKeys { (key, _) -> translateToEnglishName(key) }
-        val date = 3 // 주말 (일요일)
+        val date = 2 // 주말 (일요일)
         val expectedDiscount = 2 * WEEK_DISCOUNT_PRICE
         assertEquals(expectedDiscount, calculateWeekdayEvent(mappingOrder, date))
     }
